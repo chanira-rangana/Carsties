@@ -1,6 +1,5 @@
 using System.Net;
-using MongoDB.Driver;
-using MongoDB.Entities;
+using MassTransit;
 using Polly;
 using Polly.Extensions.Http;
 using SearchService;
@@ -11,7 +10,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpClient<AuctionSvcHttpClient>().AddPolicyHandler(GetPolicy());
-
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, config) =>
+    {
+        config.ConfigureEndpoints(context);
+    });
+});
 var app = builder.Build();
 
 app.UseAuthorization();
@@ -32,6 +37,7 @@ app.Lifetime.ApplicationStarted.Register(async () =>
 
 app.Run();
 
+// retry indefinitely if certain conditions are met
 static IAsyncPolicy<HttpResponseMessage> GetPolicy()
     => HttpPolicyExtensions.HandleTransientHttpError()
     .OrResult(msg => msg.StatusCode == HttpStatusCode.NotFound)
