@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using AuctionService.Data;
 using MassTransit;
+using AuctionService.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,12 @@ builder.Services.AddDbContext<AuctionDbContext>(options =>
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());//AppDomain.CurrentDomain.GetAssemblies() => location of profile inherited class
 builder.Services.AddMassTransit(x =>
 {
+    x.AddEntityFrameworkOutbox<AuctionDbContext>(o =>
+    {
+        o.QueryDelay = TimeSpan.FromSeconds(10);
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
     x.UsingRabbitMq((context, config) =>
     {
         config.ConfigureEndpoints(context);
